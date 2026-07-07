@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Northbeam &mdash; Revenue Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #0B111C;
+    --panel: #121A29;
+    --panel-raised: #16203353;
+    --hairline: #263049;
+    --text: #E9EDF4;
+    --muted: #8996AF;
+    --gold: #D4A03C;
+    --gold-dim: #7A5F26;
+    --teal: #2FBF9F;
+    --red: #E0616B;
+    --blue: #6E8CFF;
+    --font-display: -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "SFMono-Regular", "Cascadia Code", "Consolas", "Liberation Mono", ui-monospace, monospace;
+    --font-body: -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    padding: 28px 32px 60px;
+  }
+
+  a { color: var(--gold); }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+  }
+  .brand span { color: var(--gold); }
+
+  .as-of {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 0 0 rgba(47,191,159,0.6);
+    animation: pulse 2.2s infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse-dot { animation: none; }
+    .scanline { animation: none !important; }
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(47,191,159,0.55); }
+    70% { box-shadow: 0 0 0 7px rgba(47,191,159,0); }
+    100% { box-shadow: 0 0 0 0 rgba(47,191,159,0); }
+  }
+
+  .scanline-wrap {
+    position: relative;
+    height: 2px;
+    background: var(--hairline);
+    margin-bottom: 22px;
+    overflow: hidden;
+    border-radius: 1px;
+  }
+  .scanline {
+    position: absolute;
+    top: 0; left: -20%;
+    width: 20%; height: 100%;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    animation: scan 5s linear infinite;
+  }
+  @keyframes scan {
+    0% { left: -20%; }
+    100% { left: 100%; }
+  }
+
+  .ticker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .ticker-cell {
+    padding: 16px 18px;
+    border-right: 1px solid var(--hairline);
+  }
+  .ticker-cell:last-child { border-right: none; }
+  .ticker-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .ticker-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .ticker-value.pos { color: var(--teal); }
+  .ticker-value.neg { color: var(--red); }
+  .ticker-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 18px 20px 20px;
+  }
+
+  .panel h2 {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 3px;
+    letter-spacing: -0.01em;
+  }
+  .panel .panel-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .row-3 {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 0.8fr;
+    gap: 18px;
+  }
+
+  canvas { max-width: 100%; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #1B2436;
+    font-family: var(--font-mono);
+  }
+  td.name-cell { font-family: var(--font-body); }
+  tr:last-child td { border-bottom: none; }
+
+  .rank {
+    display: inline-block;
+    width: 20px; color: var(--muted);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+  }
+  .badge.High { background: rgba(224,97,107,0.15); color: var(--red); }
+  .badge.Medium { background: rgba(212,160,60,0.15); color: var(--gold); }
+  .badge.Low { background: rgba(47,191,159,0.15); color: var(--teal); }
+
+  .funnel-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 70px 70px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+  }
+  .funnel-label { font-family: var(--font-display); font-size: 12.5px; }
+  .funnel-bar-track {
+    background: #1A2337;
+    border-radius: 4px;
+    height: 18px;
+    overflow: hidden;
+  }
+  .funnel-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 4px;
+  }
+  .funnel-count, .funnel-conv {
+    font-family: var(--font-mono);
+    color: var(--muted);
+    text-align: right;
+    font-size: 11.5px;
+  }
+
+  footer {
+    margin-top: 28px;
+    border-top: 1px solid var(--hairline);
+    padding-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .api-connect {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .api-connect input {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    width: 220px;
+  }
+  .api-connect button {
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .api-connect button:hover { background: rgba(212,160,60,0.1); }
+  .api-connect button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  #status-msg { font-size: 11px; color: var(--muted); }
+
+  @media (max-width: 980px) {
+    .ticker { grid-template-columns: repeat(3, 1fr); }
+    .ticker-cell:nth-child(3) { border-right: none; }
+    .grid, .row-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <div class="eyebrow">Revenue Operations &middot; B2B SaaS</div>
+    <div class="brand">Northbeam <span>Revenue Intelligence</span></div>
+  </div>
+  <div class="as-of">
+    <span class="pulse-dot"></span>
+    <span id="as-of-text">Snapshot as of &mdash;</span>
+  </div>
+</header>
+
+<div class="scanline-wrap"><div class="scanline"></div></div>
+
+<section class="ticker" id="ticker"></section>
+
+<section class="grid">
+  <div class="panel">
+    <h2>Recurring Revenue</h2>
+    <div class="panel-sub">Monthly Recurring Revenue &middot; trailing history, 12-month contract-term model</div>
+    <canvas id="revenueChart" height="110"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Sales Rep Leaderboard</h2>
+    <div class="panel-sub">Ranked by closed-won revenue</div>
+    <table id="leaderboardTable">
+      <thead><tr><th></th><th>Rep</th><th>Region</th><th>Won</th><th>Win %</th><th>Revenue</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="panel">
+    <h2>Sales Funnel</h2>
+    <div class="panel-sub">Opportunities reaching each stage, all-time, with stage-to-stage conversion</div>
+    <div id="funnel"></div>
+  </div>
+  <div class="panel">
+    <h2>Churn Risk</h2>
+    <div class="panel-sub">Accounts nearing or past 12-month renewal with no follow-on deal</div>
+    <table id="churnTable">
+      <thead><tr><th>Account</th><th>Industry</th><th>Last Close</th><th>Risk</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="row-3">
+  <div class="panel">
+    <h2>Pipeline by Stage</h2>
+    <div class="panel-sub">Open opportunity value, current snapshot</div>
+    <canvas id="pipelineChart" height="160"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Customer Segmentation</h2>
+    <div class="panel-sub">Closed-won revenue by industry (top 8), split by company size</div>
+    <canvas id="segmentChart" height="160"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Activity Mix</h2>
+    <div class="panel-sub">All logged touchpoints, by type</div>
+    <canvas id="activityChart" height="160"></canvas>
+  </div>
+</section>
+
+<footer>
+  <div>Synthetic dataset &middot; generated for demonstration purposes &middot; seeded &amp; reproducible</div>
+  <div class="api-connect">
+    <input id="apiBase" type="text" placeholder="http://localhost:5000" />
+    <button id="connectBtn">Load from live API</button>
+    <span id="status-msg"></span>
+  </div>
+</footer>
+
+<script id="dashboard-data" type="application/json">{"generated_at": "2026-07-01", "summary": {"arr": 11994566.93, "mrr": 999547.24, "mrr_mom_growth_pct": -5.83, "win_rate_pct": 36.7, "open_pipeline_value": 31655105.67, "open_opportunity_count": 294, "total_accounts": 1050, "total_closed_won_deals": 453}, "revenue_timeseries": [{"month": "2023-10", "mrr": 717.0775, "arr": 8604.93, "mrr_mom_growth_pct": 0.0, "mrr_3mo_growth_pct": 0.0}, {"month": "2023-11", "mrr": 4651.6525, "arr": 55819.83, "mrr_mom_growth_pct": 548.6959219889064, "mrr_3mo_growth_pct": 0.0}, {"month": "2023-12", "mrr": 6588.339166666668, "arr": 79060.07, "mrr_mom_growth_pct": 41.63437975357505, "mrr_3mo_growth_pct": 0.0}, {"month": "2024-01", "mrr": 8778.189166666667, "arr": 105338.27, "mrr_mom_growth_pct": 33.238270596016406, "mrr_3mo_growth_pct": 1124.1618467552903}, {"month": "2024-02", "mrr": 53783.019166666665, "arr": 645396.23, "mrr_mom_growth_pct": 512.6892249132248, "mrr_3mo_growth_pct": 1056.2131772884295}, {"month": "2024-03", "mrr": 66105.44583333333, "arr": 793265.35, "mrr_mom_growth_pct": 22.911370275590226, "mrr_3mo_growth_pct": 903.370411890604}, {"month": "2024-04", "mrr": 71699.19166666667, "arr": 860390.3, "mrr_mom_growth_pct": 8.461853275199772, "mrr_3mo_growth_pct": 716.7879537038153}, {"month": "2024-05", "mrr": 75150.4775, "arr": 901805.73, "mrr_mom_growth_pct": 4.8135631003743296, "mrr_3mo_growth_pct": 39.72900492461815}, {"month": "2024-06", "mrr": 100464.34166666667, "arr": 1205572.1, "mrr_mom_growth_pct": 33.6842359606653, "mrr_3mo_growth_pct": 51.97589306024777}, {"month": "2024-07", "mrr": 119788.57166666667, "arr": 1437462.86, "mrr_mom_growth_pct": 19.234914278457495, "mrr_3mo_growth_pct": 67.07102114005703}, {"month": "2024-08", "mrr": 141188.00166666668, "arr": 1694256.02, "mrr_mom_growth_pct": 17.864333552242172, "mrr_3mo_growth_pct": 87.87372530888669}, {"month": "2024-09", "mrr": 180577.585, "arr": 2166931.02, "mrr_mom_growth_pct": 27.898676139866964, "mrr_3mo_growth_pct": 79.7429635274406}, {"month": "2024-10", "mrr": 185324.82249999998, "arr": 2223897.8699999996, "mrr_mom_growth_pct": 2.628918478447906, "mrr_3mo_growth_pct": 54.70993594923208}, {"month": "2024-11", "mrr": 206704.76249999998, "arr": 2480457.15, "mrr_mom_growth_pct": 11.536468623894148, "mrr_3mo_growth_pct": 46.40391538936362}, {"month": "2024-12", "mrr": 246724.8916666667, "arr": 2960698.7, "mrr_mom_growth_pct": 19.36100972355037, "mrr_3mo_growth_pct": 36.63096206911101}, {"month": "2025-01", "mrr": 367193.30916666664, "arr": 4406319.71, "mrr_mom_growth_pct": 48.827022148521884, "mrr_3mo_growth_pct": 98.13498494874678}, {"month": "2025-02", "mrr": 418101.885, "arr": 5017222.62, "mrr_mom_growth_pct": 13.864243863503045, "mrr_3mo_growth_pct": 102.27007832003872}, {"month": "2025-03", "mrr": 492892.825, "arr": 5914713.9, "mrr_mom_growth_pct": 17.88820923397654, "mrr_3mo_growth_pct": 99.7742593665475}, {"month": "2025-04", "mrr": 509904.4791666667, "arr": 6118853.75, "mrr_mom_growth_pct": 3.451390100204166, "mrr_3mo_growth_pct": 38.865405887672196}, {"month": "2025-05", "mrr": 659726.6516666667, "arr": 7916719.82, "mrr_mom_growth_pct": 29.38239976727668, "mrr_3mo_growth_pct": 57.79088192024455}, {"month": "2025-06", "mrr": 667813.7833333333, "arr": 8013765.4, "mrr_mom_growth_pct": 1.225830674906958, "mrr_3mo_growth_pct": 35.48863961112303}, {"month": "2025-07", "mrr": 759443.5416666666, "arr": 9113322.5, "mrr_mom_growth_pct": 13.72085461847934, "mrr_3mo_growth_pct": 48.93839389444467}, {"month": "2025-08", "mrr": 824219.3166666668, "arr": 9890631.8, "mrr_mom_growth_pct": 8.529373343256562, "mrr_3mo_growth_pct": 24.933457604667385}, {"month": "2025-09", "mrr": 851168.5825, "arr": 10214022.99, "mrr_mom_growth_pct": 3.2696717109618634, "mrr_3mo_growth_pct": 27.455977061669422}, {"month": "2025-10", "mrr": 887099.4883333334, "arr": 10645193.860000001, "mrr_mom_growth_pct": 4.221361851467709, "mrr_3mo_growth_pct": 16.809142439543876}, {"month": "2025-11", "mrr": 1010989.93, "arr": 12131879.16, "mrr_mom_growth_pct": 13.965788876671525, "mrr_3mo_growth_pct": 22.660305279992322}, {"month": "2025-12", "mrr": 1023612.7516666668, "arr": 12283353.020000001, "mrr_mom_growth_pct": 1.2485605733646432, "mrr_3mo_growth_pct": 20.25969622376973}, {"month": "2026-01", "mrr": 991938.6258333334, "arr": 11903263.51, "mrr_mom_growth_pct": -3.094346546754234, "mrr_3mo_growth_pct": 11.818193886795015}, {"month": "2026-02", "mrr": 984891.0941666667, "arr": 11818693.13, "mrr_mom_growth_pct": -0.7104806167565036, "mrr_3mo_growth_pct": -2.5815129368631062}, {"month": "2026-03", "mrr": 974051.7433333332, "arr": 11688620.919999998, "mrr_mom_growth_pct": -1.1005633919864977, "mrr_3mo_growth_pct": -4.841773244094261}, {"month": "2026-04", "mrr": 1050195.2041666666, "arr": 12602342.45, "mrr_mom_growth_pct": 7.817188496861616, "mrr_3mo_growth_pct": 5.873002302374464}, {"month": "2026-05", "mrr": 970680.0041666665, "arr": 11648160.049999999, "mrr_mom_growth_pct": -7.571468588365493, "mrr_3mo_growth_pct": -1.4429097881146435}, {"month": "2026-06", "mrr": 1061407.2725, "arr": 12736887.27, "mrr_mom_growth_pct": 9.346774214353282, "mrr_3mo_growth_pct": 8.968263725674852}, {"month": "2026-07", "mrr": 999547.2441666666, "arr": 11994566.93, "mrr_mom_growth_pct": -5.828114234381532, "mrr_3mo_growth_pct": -4.822718652594615}], "pipeline_by_stage": [{"stage": "Needs Analysis", "opportunity_count": 78, "total_value": 8742073.6, "avg_deal_value": 112077.86666666667}, {"stage": "Negotiation", "opportunity_count": 57, "total_value": 5591449.6, "avg_deal_value": 98095.60701754385}, {"stage": "Proposal", "opportunity_count": 74, "total_value": 6980779.85, "avg_deal_value": 94334.86283783783}, {"stage": "Prospecting", "opportunity_count": 43, "total_value": 5239992.88, "avg_deal_value": 121860.29953488371}, {"stage": "Qualification", "opportunity_count": 42, "total_value": 5100809.74, "avg_deal_value": 121447.85095238096}], "forecast": {"total_open_pipeline": 31655105.669999998, "weighted_forecast": 18782520.129048623, "overall_historical_win_rate": 36.71, "open_opportunity_count": 294}, "funnel": [{"stage": "Prospecting", "count": 747, "pct_of_total": 48.9, "conversion_from_previous_stage_pct": null}, {"stage": "Qualification", "count": 704, "pct_of_total": 46.1, "conversion_from_previous_stage_pct": 94.2}, {"stage": "Needs Analysis", "count": 662, "pct_of_total": 43.3, "conversion_from_previous_stage_pct": 94.0}, {"stage": "Proposal", "count": 584, "pct_of_total": 38.2, "conversion_from_previous_stage_pct": 88.2}, {"stage": "Negotiation", "count": 510, "pct_of_total": 33.4, "conversion_from_previous_stage_pct": 87.3}, {"stage": "Closed Won", "count": 453, "pct_of_total": 29.6, "conversion_from_previous_stage_pct": 88.8}], "rep_leaderboard": [{"rep_id": 2, "rep_name": "Ethan Williams", "region": "East", "deals_won": 20, "deals_lost": 28, "deals_open": 12, "revenue_closed": 1938467.94, "open_pipeline_value": 1283041.68, "total_activities": 427}, {"rep_id": 24, "rep_name": "Marcus White", "region": "EMEA", "deals_won": 15, "deals_lost": 30, "deals_open": 16, "revenue_closed": 1474801.35, "open_pipeline_value": 852074.78, "total_activities": 403}, {"rep_id": 28, "rep_name": "Casey Perez", "region": "Central", "deals_won": 26, "deals_lost": 18, "deals_open": 12, "revenue_closed": 1451533.99, "open_pipeline_value": 1284902.13, "total_activities": 348}, {"rep_id": 9, "rep_name": "Ethan Young", "region": "EMEA", "deals_won": 18, "deals_lost": 22, "deals_open": 10, "revenue_closed": 1162522.4, "open_pipeline_value": 1579064.45, "total_activities": 349}, {"rep_id": 11, "rep_name": "Lucas Brown", "region": "West", "deals_won": 13, "deals_lost": 21, "deals_open": 11, "revenue_closed": 1128745.14, "open_pipeline_value": 1376742.48, "total_activities": 283}, {"rep_id": 20, "rep_name": "Casey Patel", "region": "APAC", "deals_won": 21, "deals_lost": 35, "deals_open": 8, "revenue_closed": 1120933.92, "open_pipeline_value": 715624.92, "total_activities": 445}, {"rep_id": 16, "rep_name": "Taylor Lewis", "region": "West", "deals_won": 21, "deals_lost": 18, "deals_open": 12, "revenue_closed": 1090953.28, "open_pipeline_value": 1734255.11, "total_activities": 352}, {"rep_id": 6, "rep_name": "Noah Williams", "region": "West", "deals_won": 23, "deals_lost": 27, "deals_open": 13, "revenue_closed": 960755.34, "open_pipeline_value": 2109542.65, "total_activities": 417}, {"rep_id": 21, "rep_name": "Emma Walker", "region": "West", "deals_won": 17, "deals_lost": 17, "deals_open": 8, "revenue_closed": 928899.14, "open_pipeline_value": 1012665.61, "total_activities": 278}, {"rep_id": 7, "rep_name": "Jordan Jackson", "region": "East", "deals_won": 14, "deals_lost": 25, "deals_open": 14, "revenue_closed": 876294.5800000001, "open_pipeline_value": 1632296.6099999999, "total_activities": 359}, {"rep_id": 27, "rep_name": "Ethan Clark", "region": "East", "deals_won": 17, "deals_lost": 20, "deals_open": 7, "revenue_closed": 848010.9, "open_pipeline_value": 439972.12, "total_activities": 317}, {"rep_id": 19, "rep_name": "Aiden Lee", "region": "EMEA", "deals_won": 14, "deals_lost": 29, "deals_open": 13, "revenue_closed": 743320.62, "open_pipeline_value": 2043750.69, "total_activities": 375}, {"rep_id": 26, "rep_name": "Mia Johnson", "region": "West", "deals_won": 9, "deals_lost": 26, "deals_open": 12, "revenue_closed": 729991.59, "open_pipeline_value": 1230284.44, "total_activities": 337}, {"rep_id": 3, "rep_name": "Priya Lewis", "region": "Central", "deals_won": 9, "deals_lost": 25, "deals_open": 10, "revenue_closed": 726113.75, "open_pipeline_value": 671262.92, "total_activities": 302}, {"rep_id": 22, "rep_name": "Riley Wright", "region": "East", "deals_won": 21, "deals_lost": 32, "deals_open": 11, "revenue_closed": 709340.2, "open_pipeline_value": 608823.3099999999, "total_activities": 432}, {"rep_id": 13, "rep_name": "Lucas Chen", "region": "Central", "deals_won": 16, "deals_lost": 35, "deals_open": 9, "revenue_closed": 702410.38, "open_pipeline_value": 892325.66, "total_activities": 432}, {"rep_id": 8, "rep_name": "Chloe Williams", "region": "Central", "deals_won": 17, "deals_lost": 23, "deals_open": 9, "revenue_closed": 701472.3, "open_pipeline_value": 1080072.34, "total_activities": 313}, {"rep_id": 10, "rep_name": "Fatima Clark", "region": "APAC", "deals_won": 21, "deals_lost": 32, "deals_open": 13, "revenue_closed": 688834.58, "open_pipeline_value": 1101130.06, "total_activities": 456}, {"rep_id": 5, "rep_name": "Taylor Kim", "region": "APAC", "deals_won": 18, "deals_lost": 26, "deals_open": 15, "revenue_closed": 644277.71, "open_pipeline_value": 1091269.31, "total_activities": 396}, {"rep_id": 1, "rep_name": "Cameron Kim", "region": "West", "deals_won": 16, "deals_lost": 36, "deals_open": 8, "revenue_closed": 585072.6900000001, "open_pipeline_value": 325802.75, "total_activities": 404}, {"rep_id": 17, "rep_name": "Cameron Green", "region": "East", "deals_won": 17, "deals_lost": 22, "deals_open": 12, "revenue_closed": 559345.65, "open_pipeline_value": 2032450.33, "total_activities": 315}, {"rep_id": 23, "rep_name": "Jamie Wilson", "region": "Central", "deals_won": 17, "deals_lost": 31, "deals_open": 9, "revenue_closed": 551114.6900000001, "open_pipeline_value": 1139222.0, "total_activities": 365}, {"rep_id": 18, "rep_name": "Riley Jackson", "region": "Central", "deals_won": 20, "deals_lost": 36, "deals_open": 6, "revenue_closed": 494799.8, "open_pipeline_value": 1035733.43, "total_activities": 443}, {"rep_id": 4, "rep_name": "Riley Lee", "region": "EMEA", "deals_won": 15, "deals_lost": 34, "deals_open": 7, "revenue_closed": 470676.95, "open_pipeline_value": 245319.71, "total_activities": 400}, {"rep_id": 12, "rep_name": "Noah Baker", "region": "East", "deals_won": 12, "deals_lost": 40, "deals_open": 16, "revenue_closed": 420880.39, "open_pipeline_value": 1296914.14, "total_activities": 460}, {"rep_id": 15, "rep_name": "Mia Perez", "region": "APAC", "deals_won": 6, "deals_lost": 31, "deals_open": 8, "revenue_closed": 418532.0, "open_pipeline_value": 583572.07, "total_activities": 313}, {"rep_id": 25, "rep_name": "Aiden Smith", "region": "APAC", "deals_won": 13, "deals_lost": 32, "deals_open": 6, "revenue_closed": 294778.47, "open_pipeline_value": 1059092.13, "total_activities": 366}, {"rep_id": 14, "rep_name": "Grace Chen", "region": "EMEA", "deals_won": 7, "deals_lost": 30, "deals_open": 7, "revenue_closed": 122472.54000000001, "open_pipeline_value": 1197897.84, "total_activities": 315}], "segmentation": [{"industry": "Education", "company_size": "Enterprise", "account_count": 15, "total_revenue": 1908781.47, "avg_deal_value": 318130.245}, {"industry": "Education", "company_size": "Mid-Market", "account_count": 23, "total_revenue": 357004.51, "avg_deal_value": 39667.16777777778}, {"industry": "Education", "company_size": "SMB", "account_count": 45, "total_revenue": 211828.77, "avg_deal_value": 10087.084285714285}, {"industry": "Energy & Utilities", "company_size": "Enterprise", "account_count": 6, "total_revenue": 1466095.66, "avg_deal_value": 366523.915}, {"industry": "Energy & Utilities", "company_size": "Mid-Market", "account_count": 17, "total_revenue": 321046.07, "avg_deal_value": 53507.67833333334}, {"industry": "Energy & Utilities", "company_size": "SMB", "account_count": 42, "total_revenue": 329652.52, "avg_deal_value": 10988.417333333335}, {"industry": "Financial Services", "company_size": "Enterprise", "account_count": 9, "total_revenue": 307178.96, "avg_deal_value": 307178.96}, {"industry": "Financial Services", "company_size": "Mid-Market", "account_count": 16, "total_revenue": 86564.94, "avg_deal_value": 43282.47}, {"industry": "Financial Services", "company_size": "SMB", "account_count": 42, "total_revenue": 169027.5, "avg_deal_value": 9942.79411764706}, {"industry": "Government & Public Sector", "company_size": "Enterprise", "account_count": 13, "total_revenue": 1809895.93, "avg_deal_value": 258556.5614285714}, {"industry": "Government & Public Sector", "company_size": "Mid-Market", "account_count": 21, "total_revenue": 300124.94, "avg_deal_value": 60024.988}, {"industry": "Government & Public Sector", "company_size": "SMB", "account_count": 37, "total_revenue": 192386.8, "avg_deal_value": 11316.870588235293}, {"industry": "Healthcare", "company_size": "Enterprise", "account_count": 9, "total_revenue": 712674.98, "avg_deal_value": 178168.745}, {"industry": "Healthcare", "company_size": "Mid-Market", "account_count": 23, "total_revenue": 374739.53, "avg_deal_value": 34067.23}, {"industry": "Healthcare", "company_size": "SMB", "account_count": 46, "total_revenue": 173006.63, "avg_deal_value": 9611.479444444445}, {"industry": "Hospitality & Travel", "company_size": "Enterprise", "account_count": 13, "total_revenue": 863094.7000000001, "avg_deal_value": 215773.67500000002}, {"industry": "Hospitality & Travel", "company_size": "Mid-Market", "account_count": 17, "total_revenue": 226113.76, "avg_deal_value": 37685.62666666667}, {"industry": "Hospitality & Travel", "company_size": "SMB", "account_count": 41, "total_revenue": 228070.62, "avg_deal_value": 11403.530999999999}, {"industry": "Logistics & Supply Chain", "company_size": "Enterprise", "account_count": 14, "total_revenue": 539761.78, "avg_deal_value": 179920.59333333335}, {"industry": "Logistics & Supply Chain", "company_size": "Mid-Market", "account_count": 24, "total_revenue": 336147.37, "avg_deal_value": 42018.42125}, {"industry": "Logistics & Supply Chain", "company_size": "SMB", "account_count": 37, "total_revenue": 166362.28, "avg_deal_value": 11090.818666666666}, {"industry": "Manufacturing", "company_size": "Enterprise", "account_count": 15, "total_revenue": 2725623.92, "avg_deal_value": 302847.1022222222}, {"industry": "Manufacturing", "company_size": "Mid-Market", "account_count": 27, "total_revenue": 269528.18, "avg_deal_value": 53905.636}, {"industry": "Manufacturing", "company_size": "SMB", "account_count": 34, "total_revenue": 255505.86, "avg_deal_value": 11613.902727272727}, {"industry": "Media & Entertainment", "company_size": "Enterprise", "account_count": 7, "total_revenue": 57535.7, "avg_deal_value": 57535.7}, {"industry": "Media & Entertainment", "company_size": "Mid-Market", "account_count": 12, "total_revenue": 133245.13, "avg_deal_value": 44415.043333333335}, {"industry": "Media & Entertainment", "company_size": "SMB", "account_count": 32, "total_revenue": 208038.61000000002, "avg_deal_value": 11557.700555555557}, {"industry": "Non-Profit", "company_size": "Enterprise", "account_count": 9, "total_revenue": 898475.43, "avg_deal_value": 299491.81}, {"industry": "Non-Profit", "company_size": "Mid-Market", "account_count": 22, "total_revenue": 185446.2, "avg_deal_value": 30907.7}, {"industry": "Non-Profit", "company_size": "SMB", "account_count": 34, "total_revenue": 143934.64, "avg_deal_value": 11071.895384615385}, {"industry": "Professional Services", "company_size": "Enterprise", "account_count": 9, "total_revenue": 861577.97, "avg_deal_value": 215394.4925}, {"industry": "Professional Services", "company_size": "Mid-Market", "account_count": 15, "total_revenue": 216011.86, "avg_deal_value": 36001.97666666666}, {"industry": "Professional Services", "company_size": "SMB", "account_count": 32, "total_revenue": 199397.3, "avg_deal_value": 10494.594736842104}, {"industry": "Real Estate", "company_size": "Enterprise", "account_count": 11, "total_revenue": 1865955.02, "avg_deal_value": 233244.3775}, {"industry": "Real Estate", "company_size": "Mid-Market", "account_count": 19, "total_revenue": 380401.14, "avg_deal_value": 54343.020000000004}, {"industry": "Real Estate", "company_size": "SMB", "account_count": 45, "total_revenue": 289838.9, "avg_deal_value": 12601.691304347827}, {"industry": "Retail & E-commerce", "company_size": "Enterprise", "account_count": 5, "total_revenue": 230453.79, "avg_deal_value": 115226.895}, {"industry": "Retail & E-commerce", "company_size": "Mid-Market", "account_count": 32, "total_revenue": 530055.64, "avg_deal_value": 48186.876363636366}, {"industry": "Retail & E-commerce", "company_size": "SMB", "account_count": 34, "total_revenue": 209864.6, "avg_deal_value": 10493.23}, {"industry": "Technology", "company_size": "Enterprise", "account_count": 5, "total_revenue": 0.0, "avg_deal_value": 0.0}, {"industry": "Technology", "company_size": "Mid-Market", "account_count": 26, "total_revenue": 253565.51, "avg_deal_value": 42260.918333333335}, {"industry": "Technology", "company_size": "SMB", "account_count": 40, "total_revenue": 242629.86, "avg_deal_value": 11553.802857142857}, {"industry": "Telecommunications", "company_size": "Enterprise", "account_count": 14, "total_revenue": 623368.4299999999, "avg_deal_value": 207789.47666666665}, {"industry": "Telecommunications", "company_size": "Mid-Market", "account_count": 20, "total_revenue": 486222.4, "avg_deal_value": 48622.240000000005}, {"industry": "Telecommunications", "company_size": "SMB", "account_count": 41, "total_revenue": 199116.48, "avg_deal_value": 10479.814736842105}], "clv_top": [{"account_id": 1041, "company_name": "Cobalt Capital 4", "industry": "Energy & Utilities", "company_size": "Enterprise", "lifetime_value": 690919.25}, {"account_id": 50, "company_name": "Fusion Analytics", "industry": "Education", "company_size": "Enterprise", "lifetime_value": 598584.83}, {"account_id": 260, "company_name": "Catalyst Analytics", "industry": "Hospitality & Travel", "company_size": "Enterprise", "lifetime_value": 552840.81}, {"account_id": 631, "company_name": "Pioneer Partners 3", "industry": "Education", "company_size": "Enterprise", "lifetime_value": 543566.26}, {"account_id": 916, "company_name": "Nimbus Systems 3", "industry": "Manufacturing", "company_size": "Enterprise", "lifetime_value": 523807.29000000004}, {"account_id": 10, "company_name": "Sterling Systems", "industry": "Manufacturing", "company_size": "Enterprise", "lifetime_value": 473747.62}, {"account_id": 272, "company_name": "Crestline Logistics", "industry": "Non-Profit", "company_size": "Enterprise", "lifetime_value": 469650.84}, {"account_id": 705, "company_name": "Ironclad Works 2", "industry": "Manufacturing", "company_size": "Enterprise", "lifetime_value": 417432.12}, {"account_id": 403, "company_name": "Keystone Robotics", "industry": "Government & Public Sector", "company_size": "Enterprise", "lifetime_value": 401699.08999999997}, {"account_id": 23, "company_name": "Cascade Logistics", "industry": "Manufacturing", "company_size": "Enterprise", "lifetime_value": 397771.42000000004}, {"account_id": 882, "company_name": "Redwood Partners 2", "industry": "Real Estate", "company_size": "Enterprise", "lifetime_value": 390733.42}, {"account_id": 592, "company_name": "Beacon Robotics 4", "industry": "Manufacturing", "company_size": "Enterprise", "lifetime_value": 388534.57}, {"account_id": 800, "company_name": "Meridian Analytics 3", "industry": "Healthcare", "company_size": "Enterprise", "lifetime_value": 381376.11}, {"account_id": 684, "company_name": "Zenith Works 2", "industry": "Government & Public Sector", "company_size": "Enterprise", "lifetime_value": 377397.64}, {"account_id": 1038, "company_name": "Meridian Capital 3", "industry": "Government & Public Sector", "company_size": "Enterprise", "lifetime_value": 365806.49}], "churn_risk_top": [{"account_id": 4, "company_name": "Momentum Software", "industry": "Real Estate", "company_size": "Mid-Market", "last_close_date": "2024-08-05", "days_since_last_close": 695, "risk_score": 100, "risk_band": "High"}, {"account_id": 16, "company_name": "Harbor Technologies", "industry": "Healthcare", "company_size": "Mid-Market", "last_close_date": "2024-12-18", "days_since_last_close": 560, "risk_score": 100, "risk_band": "High"}, {"account_id": 1041, "company_name": "Cobalt Capital 4", "industry": "Energy & Utilities", "company_size": "Enterprise", "last_close_date": "2025-01-08", "days_since_last_close": 539, "risk_score": 100, "risk_band": "High"}, {"account_id": 1037, "company_name": "Quantum Works 2", "industry": "Hospitality & Travel", "company_size": "SMB", "last_close_date": "2024-09-02", "days_since_last_close": 667, "risk_score": 100, "risk_band": "High"}, {"account_id": 952, "company_name": "Horizon Technologies", "industry": "Logistics & Supply Chain", "company_size": "SMB", "last_close_date": "2024-08-28", "days_since_last_close": 672, "risk_score": 100, "risk_band": "High"}, {"account_id": 943, "company_name": "Keystone Analytics 2", "industry": "Retail & E-commerce", "company_size": "Mid-Market", "last_close_date": "2024-06-13", "days_since_last_close": 748, "risk_score": 100, "risk_band": "High"}, {"account_id": 946, "company_name": "Beacon Analytics 4", "industry": "Energy & Utilities", "company_size": "SMB", "last_close_date": "2024-01-27", "days_since_last_close": 886, "risk_score": 100, "risk_band": "High"}, {"account_id": 1032, "company_name": "Horizon Systems 3", "industry": "Telecommunications", "company_size": "SMB", "last_close_date": "2023-12-15", "days_since_last_close": 929, "risk_score": 100, "risk_band": "High"}, {"account_id": 21, "company_name": "Orbit Health", "industry": "Energy & Utilities", "company_size": "SMB", "last_close_date": "2025-02-26", "days_since_last_close": 490, "risk_score": 100, "risk_band": "High"}, {"account_id": 898, "company_name": "Meridian Labs", "industry": "Media & Entertainment", "company_size": "SMB", "last_close_date": "2024-11-21", "days_since_last_close": 587, "risk_score": 100, "risk_band": "High"}, {"account_id": 936, "company_name": "Ironclad Logistics 2", "industry": "Non-Profit", "company_size": "SMB", "last_close_date": "2025-01-06", "days_since_last_close": 541, "risk_score": 100, "risk_band": "High"}, {"account_id": 923, "company_name": "Lumen Holdings 2", "industry": "Retail & E-commerce", "company_size": "SMB", "last_close_date": "2024-10-04", "days_since_last_close": 635, "risk_score": 100, "risk_band": "High"}, {"account_id": 956, "company_name": "Meridian Systems", "industry": "Telecommunications", "company_size": "SMB", "last_close_date": "2024-08-27", "days_since_last_close": 673, "risk_score": 100, "risk_band": "High"}, {"account_id": 929, "company_name": "Pioneer Analytics 3", "industry": "Retail & E-commerce", "company_size": "SMB", "last_close_date": "2025-02-03", "days_since_last_close": 513, "risk_score": 100, "risk_band": "High"}, {"account_id": 814, "company_name": "Ironclad Capital 2", "industry": "Technology", "company_size": "SMB", "last_close_date": "2023-11-19", "days_since_last_close": 955, "risk_score": 100, "risk_band": "High"}], "churn_band_counts": {"Low": 211, "High": 158, "Medium": 40}, "activity_volume": [{"activity_type": "Call", "activity_count": 3548}, {"activity_type": "Email", "activity_count": 3521}, {"activity_type": "Meeting", "activity_count": 2079}, {"activity_type": "Contract Sent", "activity_count": 1007}, {"activity_type": "Proposal Sent", "activity_count": 130}, {"activity_type": "Demo", "activity_count": 117}]}</script>
+<script src="dashboard.js"></script>
+</body>
+</html>

@@ -129,8 +129,3 @@ one. To migrate:
 No model or query code changes are required — see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#postgresql-migration) for
 details.
-
-## License
-
-MIT — use this as a portfolio piece, teaching example, or starting point
-freely.
